@@ -91,22 +91,28 @@
     objLoader.load(REPO_URL + 'tree.obj', (treeObj) => {
         treeObj1 = setupTrees(treeObj);
         treesReady++;
-        if (treesReady === 2) spawnForest();
+        if (treesReady >= 1) spawnForest();
     }, undefined, (error) => {
         console.error('Error loading tree.obj:', error);
+        treesReady++;
+        if (treesReady >= 1) spawnForest();
     });
 
     objLoader.load(REPO_URL + 'tree2.obj', (treeObj) => {
         treeObj2 = setupTrees(treeObj);
         treesReady++;
-        if (treesReady === 2) spawnForest();
+        if (treesReady >= 1) spawnForest();
     }, undefined, (error) => {
         console.error('Error loading tree2.obj:', error);
+        treesReady++;
+        if (treesReady >= 1) spawnForest();
     });
 
     const spawnForest = () => {
+        if (!treeObj1 && !treeObj2) return;
+        const templateTree = treeObj1 || treeObj2;
+        
         const createTree = () => {
-            const templateTree = Math.random() > 0.5 ? treeObj1 : treeObj2;
             const tree = templateTree.clone(true);
             tree.traverse(child => {
                 if (child.isMesh && child.material) {
