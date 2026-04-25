@@ -55,7 +55,7 @@ let treeObj2 = null;
 let forestSpawned = false;
 
 let enemy = null;
-let enemySpeed = 0.1; // faster enemy
+let enemySpeed = 0.1; // faster
 
 const collidableObjects = [];
 const treeInstances = [];
@@ -69,16 +69,12 @@ let exitPortal = null;
 /* -------------------------------------------------------
    LIGHTING
 ------------------------------------------------------- */
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.5));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.6));
 scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
-const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-sun.position.set(5, 10, 5);
+const sun = new THREE.DirectionalLight(0xffffff, 1);
+sun.position.set(10, 20, 10);
 scene.add(sun);
-
-const cabinLight = new THREE.PointLight(0xffccaa, 0.7, 20, 2);
-cabinLight.position.set(0, 3, 0);
-scene.add(cabinLight);
 
 /* -------------------------------------------------------
    FLOOR
@@ -169,14 +165,16 @@ function setupTree(tree) {
             const pos = child.geometry.attributes.position;
             const colors = [];
 
+            const bbox = new THREE.Box3().setFromBufferAttribute(pos);
+            const minY = bbox.min.y;
+            const maxY = bbox.max.y;
+            const height = maxY - minY;
+
             for (let i = 0; i < pos.count; i++) {
-                const x = pos.getX(i);
                 const y = pos.getY(i);
-                const z = pos.getZ(i);
+                const t = (y - minY) / height;
 
-                const dist = Math.sqrt(x * x + y * y + z * z);
-
-                if (dist < 1.2) {
+                if (t < 0.25) {
                     colors.push(0.4, 0.25, 0.1); // brown trunk
                 } else {
                     colors.push(0.2, 0.6, 0.2); // green leaves
@@ -239,22 +237,27 @@ objLoader.load(REPO_URL + "tree2.obj", (obj) => {
 });
 
 /* -------------------------------------------------------
-   CABIN
+   CABIN (brown wood)
 ------------------------------------------------------- */
 gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
+
     glb.scene.traverse(child => {
         if (child.isMesh) {
+
             child.geometry.computeVertexNormals();
+
             child.material = new THREE.MeshStandardMaterial({
-                color: 0xb8b8b8,
-                roughness: 0.9,
+                color: 0x7a5230,   // brown wood
+                roughness: 0.85,
                 metalness: 0.0
             });
+
             collidableObjects.push(child);
         }
     });
 
     glb.scene.scale.set(13, 13, 13);
+
     const bbox = new THREE.Box3().setFromObject(glb.scene);
     glb.scene.position.y = -bbox.min.y;
 
@@ -280,7 +283,7 @@ objLoader.load(REPO_URL + "enemy.obj", (obj) => {
         }
     });
 
-    enemy.scale.set(0.8, 0.8, 0.8); // smaller
+    enemy.scale.set(0.8, 0.8, 0.8);
     enemy.position.set(0, 1, -60);
 
     scene.add(enemy);
