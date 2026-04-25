@@ -54,10 +54,13 @@ let treeObj1 = null;
 let treeObj2 = null;
 let forestSpawned = false;
 
+let enemy = null;
+let enemySpeed = 0.03;
+
 const collidableObjects = [];
 const treeInstances = [];
 
-const TREE_COUNT = 120;        // ← 120 TREES
+const TREE_COUNT = 120;
 const TREE_MIN_RADIUS = 35;
 const TREE_MAX_RADIUS = 80;
 
@@ -100,12 +103,8 @@ objLoader.load(REPO_URL + "grass.obj", (obj) => {
         }
     });
 
-    // Make grass wide + long but not tall
     grassObj.scale.set(10, 1, 10);
 
-    console.log("Grass loaded");
-
-    // Spread grass over a large area
     for (let x = -150; x <= 150; x += 30) {
         for (let z = -150; z <= 150; z += 30) {
             const patch = grassObj.clone(true);
@@ -213,14 +212,36 @@ gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
 });
 
 /* -------------------------------------------------------
+   ENEMY (enemy.obj)
+------------------------------------------------------- */
+objLoader.load(REPO_URL + "enemy.obj", (obj) => {
+    enemy = obj;
+
+    enemy.traverse(child => {
+        if (child.isMesh) {
+            if (child.material && child.material.clone) {
+                child.material = child.material.clone();
+            }
+            child.material.color = new THREE.Color(0x880000);
+            collidableObjects.push(child);
+        }
+    });
+
+    enemy.scale.set(1.5, 1.5, 1.5);
+    enemy.position.set(0, 0, -60);
+
+    scene.add(enemy);
+});
+
+/* -------------------------------------------------------
    CONTROLS
 ------------------------------------------------------- */
 const controls = new THREE.PointerLockControls(camera, document.body);
 document.addEventListener("click", () => controls.lock());
 
 const keys = { w:false, a:false, s:false, d:false };
-document.addEventListener("keydown", e => { if (keys[e.key]) keys[e.key] = true; });
-document.addEventListener("keyup", e => { if (keys[e.key]) keys[e.key] = false; });
+document.addEventListener("keydown", e => { if (keys[e.key] !== undefined) keys[e.key] = true; });
+document.addEventListener("keyup", e => { if (keys[e.key] !== undefined) keys[e.key] = false; });
 
 const raycaster = new THREE.Raycaster();
 
@@ -230,6 +251,22 @@ const raycaster = new THREE.Raycaster();
 function animate() {
     requestAnimationFrame(animate);
 
+    /* Enemy AI */
+    if (enemy) {
+        const playerPos = camera.position.clone();
+        const enemyPos = enemy.position.clone();
+
+        const direction = playerPos.sub(enemyPos).normalize();
+        enemy.position.add(direction.multiplyScalar(enemySpeed));
+
+        enemy.lookAt(camera.position);
+
+        if (enemy.position.distanceTo(camera.position) < 2) {
+            console.log("The monster caught you");
+        }
+    }
+
+    /* Player movement */
     if (controls.isLocked) {
         const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
 
