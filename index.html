@@ -65,10 +65,27 @@
     let forestSpawned = false;
     const objLoader = new THREE.OBJLoader();
     const gltfLoader = new THREE.GLTFLoader();
-
+    // 2. Load the Shrub .obj for perimeter wall
+    objLoader.load(REPO_URL + 'shrub.obj', (obj) => {
+        shrubObj = obj;
+        shrubObj.traverse(child => {
+            if (child.isMesh) {
+                if (child.material) {
+                    if (child.material.clone) {
+                        child.material = child.material.clone();
+                    }
+                    child.material.color = new THREE.Color(0x1a2a0a);
+                }
+            }
+        });
+        shrubObj.scale.set(1, 1, 1);
+        console.log("Shrub loaded");
+    }, undefined, (error) => {
+        console.error('Error loading shrub:', error);
+    });
     // 1. Load the Couch .obj
     objLoader.load(REPO_URL + 'couch.obj', (obj) => {
-        obj.scale.set(0.05, 0.05, 0.05); // Adjust scale if couch is too big/small
+        obj.scale.set(0.2, 0.2, 0.2); // Adjust scale if couch is too big/small
         obj.position.set(3, 0, -3);      // Place it in the corner
         
         scene.add(obj);
