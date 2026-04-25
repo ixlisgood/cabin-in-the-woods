@@ -9,8 +9,14 @@ A simple 3D web application built with Three.js that lets you explore a cabin in
 - Flashlight lighting
 - Loads 3D models from GitHub repository
 
-## How to Run
-1. Ensure you have a local web server that supports ES modules (e.g., Python's http.server).
+## Deployment to GitHub Pages
+1. Ensure your repository is public.
+2. Go to repository Settings > Pages.
+3. Set source to "Deploy from a branch" and select "main" branch.
+4. The site will be available at `https://ixlisgood.github.io/cabin-in-the-woods/`.
+
+## Local Development
+1. Ensure you have a local web server.
 2. Run the server in the project directory:
    ```
    python3 -m http.server 8000
@@ -22,4 +28,4 @@ A simple 3D web application built with Three.js that lets you explore a cabin in
 - `couch.obj`: 3D model of a couch
 - `cabin.glb`: 3D model of the cabin
 
-Assets are loaded from the GitHub repository.
+Assets must be committed to the repository for the app to load them properly.
