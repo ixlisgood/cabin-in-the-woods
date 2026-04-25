@@ -55,7 +55,7 @@ let treeObj2 = null;
 let forestSpawned = false;
 
 let enemy = null;
-let enemySpeed = 0.1; // faster
+let enemySpeed = 0.1; // faster enemy
 
 const collidableObjects = [];
 const treeInstances = [];
@@ -170,9 +170,13 @@ function setupTree(tree) {
             const colors = [];
 
             for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
                 const y = pos.getY(i);
+                const z = pos.getZ(i);
 
-                if (y < 2) {
+                const dist = Math.sqrt(x * x + y * y + z * z);
+
+                if (dist < 1.2) {
                     colors.push(0.4, 0.25, 0.1); // brown trunk
                 } else {
                     colors.push(0.2, 0.6, 0.2); // green leaves
@@ -185,7 +189,8 @@ function setupTree(tree) {
             );
 
             child.material = new THREE.MeshStandardMaterial({
-                vertexColors: true
+                vertexColors: true,
+                roughness: 0.9
             });
         }
     });
@@ -239,9 +244,11 @@ objLoader.load(REPO_URL + "tree2.obj", (obj) => {
 gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
     glb.scene.traverse(child => {
         if (child.isMesh) {
+            child.geometry.computeVertexNormals();
             child.material = new THREE.MeshStandardMaterial({
-                color: 0x888888,
-                roughness: 0.9
+                color: 0xb8b8b8,
+                roughness: 0.9,
+                metalness: 0.0
             });
             collidableObjects.push(child);
         }
@@ -249,7 +256,8 @@ gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
 
     glb.scene.scale.set(13, 13, 13);
     const bbox = new THREE.Box3().setFromObject(glb.scene);
-    glb.scene.position.set(0, -bbox.min.y, 0);
+    glb.scene.position.y = -bbox.min.y;
+
     scene.add(glb.scene);
 });
 
@@ -333,12 +341,10 @@ function animate() {
 
         enemy.lookAt(camera.position);
 
-        // Fake walking animation: bob + sway
         const t = Date.now() * 0.005;
         enemy.position.y = 1 + Math.sin(t) * 0.1;
         enemy.rotation.x = Math.sin(t * 0.6) * 0.1;
 
-        // Catch player
         if (enemy.position.distanceTo(camera.position) < 1.5) {
             alert("The creature caught you...");
             location.reload();
