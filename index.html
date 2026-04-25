@@ -55,6 +55,34 @@
     floor.receiveShadow = true;
     scene.add(floor);
 
+    // 1. Load the Grass .obj for ground
+    objLoader.load(REPO_URL + 'grass.obj', (obj) => {
+        const grassObj = obj;
+        grassObj.traverse(child => {
+            if (child.isMesh) {
+                if (child.material) {
+                    if (child.material.clone) {
+                        child.material = child.material.clone();
+                    }
+                    child.material.color = new THREE.Color(0x2b3a15);
+                }
+            }
+        });
+        grassObj.scale.set(1, 1, 1);
+        console.log("Grass loaded");
+
+        // Create grass ground immediately
+        for (let x = -20; x <= 20; x += 10) {
+            for (let z = -20; z <= 20; z += 10) {
+                const grass = grassObj.clone(true);
+                grass.position.set(x, 0, z);
+                scene.add(grass);
+            }
+        }
+    }, undefined, (error) => {
+        console.error('Error loading grass:', error);
+    });
+
     const collidableObjects = [];
     const treeInstances = [];
     const TREE_COUNT = 30;
