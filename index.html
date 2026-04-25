@@ -37,11 +37,12 @@
     scene.add(cabinLight);
 
     const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(200, 200),
-        new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 })
+        new THREE.PlaneGeometry(1000, 1000),
+        new THREE.MeshStandardMaterial({ color: 0x2b3a15, roughness: 0.95 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 0;
+    floor.receiveShadow = true;
     scene.add(floor);
 
     const flashlight = new THREE.SpotLight(0xffffff, 60, 40, Math.PI / 6);
@@ -49,6 +50,10 @@
     scene.add(flashlight.target);
 
     const collidableObjects = [];
+    const treeInstances = [];
+    const TREE_COUNT = 140;
+    const TREE_MIN_RADIUS = 18;
+    const TREE_MAX_RADIUS = 120;
     const objLoader = new THREE.OBJLoader();
     const gltfLoader = new THREE.GLTFLoader();
 
@@ -68,19 +73,42 @@
         console.error('Error loading couch:', error);
     });
 
-    // 2. Add the Interior Wall (Built-in shape)
-    const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(10, 5, 0.5),
-        new THREE.MeshStandardMaterial({ color: 0x3d2b1f })
-    );
-    wall.position.set(-5, 2.5, -5);
-    scene.add(wall);
-    collidableObjects.push(wall);
+    // 2. Load the Tree .obj and place the forest around the cabin
+    objLoader.load(REPO_URL + 'tree.obj', (treeObj) => {
+        treeObj.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        treeObj.scale.set(0.5, 0.5, 0.5);
+
+        const createTree = () => {
+            const tree = treeObj.clone(true);
+            const angle = Math.random() * Math.PI * 2;
+            const radius = THREE.MathUtils.lerp(TREE_MIN_RADIUS, TREE_MAX_RADIUS, Math.random());
+            tree.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+            tree.rotation.y = Math.random() * Math.PI * 2;
+            scene.add(tree);
+            treeInstances.push(tree);
+            tree.traverse(child => {
+                if (child.isMesh) collidableObjects.push(child);
+            });
+        };
+
+        for (let i = 0; i < TREE_COUNT; i++) {
+            createTree();
+        }
+        console.log('Forest loaded with ' + treeInstances.length + ' trees');
+    }, undefined, (error) => {
+        console.error('Error loading tree:', error);
+    });
 
     // 3. Load the Cabin .glb
     gltfLoader.load(REPO_URL + 'Cabin.glb', (glb) => {
         glb.scene.scale.set(10, 10, 10);
-        glb.scene.position.set(0, 0, 0);
+        const bbox = new THREE.Box3().setFromObject(glb.scene);
+        glb.scene.position.set(0, -bbox.min.y, 0);
         scene.add(glb.scene);
         glb.scene.traverse(child => {
             if (child.isMesh) collidableObjects.push(child);
@@ -105,6 +133,18 @@
             flashlight.position.copy(camera.position);
             const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
             flashlight.target.position.copy(camera.position).add(dir);
+
+            floor.position.set(camera.position.x, 0, camera.position.z);
+            treeInstances.forEach(tree => {
+                const dx = tree.position.x - camera.position.x;
+                const dz = tree.position.z - camera.position.z;
+                const distSq = dx * dx + dz * dz;
+                if (distSq > TREE_MAX_RADIUS * TREE_MAX_RADIUS) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = THREE.MathUtils.lerp(TREE_MIN_RADIUS, TREE_MAX_RADIUS, Math.random());
+                    tree.position.set(camera.position.x + Math.cos(angle) * radius, 0, camera.position.z + Math.sin(angle) * radius);
+                }
+            });
 
             // Collision Check
             let canMove = true;
