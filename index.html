@@ -11,8 +11,8 @@
 </head>
 <body>
     <script>
-        // --- GITHUB CONFIG ---
-        const REPO_URL = "https://raw.githubusercontent.com/ixlisgood/cabin-in-the-woods/main/";
+        // --- ASSET PATHS ---
+        const REPO_URL = "./";
         
         const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050505);
@@ -60,7 +60,7 @@
     collidableObjects.push(wall);
 
     // 3. Load the Cabin .glb
-    gltfLoader.load(REPO_URL + 'cabin.glb', (glb) => {
+    gltfLoader.load(REPO_URL + 'Cabin.glb', (glb) => {
         glb.scene.scale.set(10, 10, 10);
         scene.add(glb.scene);
         glb.scene.traverse(child => {
