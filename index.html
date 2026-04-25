@@ -18,8 +18,8 @@
     scene.background = new THREE.Color(0x050505);
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     
-    // Spawn Point: Inside the cabin
-    camera.position.set(0, 1.6, 2); 
+    // Spawn Point: Behind the cabin so it is visible initially
+    camera.position.set(0, 2.5, 12);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -44,10 +44,6 @@
     floor.position.y = 0;
     floor.receiveShadow = true;
     scene.add(floor);
-
-    const flashlight = new THREE.SpotLight(0xffffff, 60, 40, Math.PI / 6);
-    scene.add(flashlight);
-    scene.add(flashlight.target);
 
     const collidableObjects = [];
     const treeInstances = [];
@@ -79,12 +75,22 @@
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
+                if (child.material) {
+                    child.material = child.material.clone();
+                    child.material.color = new THREE.Color(0x2f7d2a);
+                }
             }
         });
         treeObj.scale.set(0.5, 0.5, 0.5);
 
         const createTree = () => {
             const tree = treeObj.clone(true);
+            tree.traverse(child => {
+                if (child.isMesh && child.material) {
+                    child.material = child.material.clone();
+                    child.material.color = new THREE.Color(0x2f7d2a);
+                }
+            });
             const angle = Math.random() * Math.PI * 2;
             const radius = THREE.MathUtils.lerp(TREE_MIN_RADIUS, TREE_MAX_RADIUS, Math.random());
             tree.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
@@ -130,11 +136,8 @@
     function animate() {
         requestAnimationFrame(animate);
         if (controls.isLocked) {
-            flashlight.position.copy(camera.position);
             const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            flashlight.target.position.copy(camera.position).add(dir);
 
-            floor.position.set(camera.position.x, 0, camera.position.z);
             treeInstances.forEach(tree => {
                 const dx = tree.position.x - camera.position.x;
                 const dz = tree.position.z - camera.position.z;
