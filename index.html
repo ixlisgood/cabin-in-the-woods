@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cabin in the Woods</title>
+    <title>Boulder in the Forest</title>
 
     <!-- Three.js + extras -->
     <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -20,8 +20,9 @@
 <body>
 
 <div id="ui">
-    <div id="story">CABIN IN THE WOODS<br>You wake up in an old cabin... something feels wrong.</div>
-    <div>WASD: Move | Mouse: Look | Click to start</div>
+    <div id="story">BOULDER IN THE FOREST<br>Destroy as many trees as possible!</div>
+    <div>Score: <span id="score">0</span></div>
+    <div>WASD: Move | Mouse: Look (Third Person)</div>
 </div>
 
 <script>
@@ -54,9 +55,9 @@ let treeObj1 = null;
 let treeObj2 = null;
 let forestSpawned = false;
 
-let enemy = null;
-let enemySpeed = 0.1; // faster
-let enemyMixer = null;
+let boulder = null;
+let dog = null;
+let score = 0;
 
 const collidableObjects = [];
 const treeInstances = [];
@@ -65,9 +66,9 @@ const TREE_COUNT = 120;
 const TREE_MIN_RADIUS = 35;
 const TREE_MAX_RADIUS = 80;
 
-let exitPortal = null;
-
-const clock = new THREE.Clock();
+let cameraDistance = 10;
+let cameraHeight = 5;
+let cameraAngle = 0;
 
 /* -------------------------------------------------------
    LIGHTING
@@ -88,16 +89,6 @@ const floor = new THREE.Mesh(
 );
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
-
-/* -------------------------------------------------------
-   EXIT PORTAL
-------------------------------------------------------- */
-exitPortal = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 3, 0.5),
-    new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x008844 })
-);
-exitPortal.position.set(0, 1.5, 80);
-scene.add(exitPortal);
 
 /* -------------------------------------------------------
    GRASS (grass.obj)
@@ -135,24 +126,6 @@ objLoader.load(REPO_URL + "shrub.obj", (obj) => {
             child.material = new THREE.MeshStandardMaterial({
                 color: 0x1a2a0a
             });
-        }
-    });
-});
-
-/* -------------------------------------------------------
-   COUCH
-------------------------------------------------------- */
-objLoader.load(REPO_URL + "couch.obj", (obj) => {
-    obj.scale.set(0.2, 0.2, 0.2);
-    obj.position.set(3, 0, -3);
-    scene.add(obj);
-
-    obj.traverse(child => {
-        if (child.isMesh) {
-            child.material = new THREE.MeshStandardMaterial({
-                color: 0xaaaaaa
-            });
-            collidableObjects.push(child);
         }
     });
 });
@@ -240,72 +213,54 @@ objLoader.load(REPO_URL + "tree2.obj", (obj) => {
 });
 
 /* -------------------------------------------------------
-   CABIN (brown wood)
+   BOULDER (boulder.gltf)
 ------------------------------------------------------- */
-gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
+gltfLoader.load(REPO_URL + "boulder.gltf", (glb) => {
+    boulder = glb.scene;
 
-    glb.scene.traverse(child => {
+    boulder.traverse(child => {
         if (child.isMesh) {
-
             child.geometry.computeVertexNormals();
 
             child.material = new THREE.MeshStandardMaterial({
-                color: 0x7a5230,   // brown wood
-                roughness: 0.85,
-                metalness: 0.0
+                color: 0x666666,
+                roughness: 0.9
             });
-
-            collidableObjects.push(child);
         }
     });
 
-    glb.scene.scale.set(13, 13, 13);
+    boulder.scale.set(1, 1, 1);
+    boulder.position.set(0, 1, 0);
 
-    const bbox = new THREE.Box3().setFromObject(glb.scene);
-    glb.scene.position.y = -bbox.min.y;
-
-    scene.add(glb.scene);
+    scene.add(boulder);
 });
 
 /* -------------------------------------------------------
-   ENEMY (enemy.glb)
+   DOG (dog.glb)
 ------------------------------------------------------- */
-gltfLoader.load(REPO_URL + "enemy.glb", (glb) => {
-    enemy = glb.scene;
+gltfLoader.load(REPO_URL + "dog.glb", (glb) => {
+    dog = glb.scene;
 
-    enemy.traverse(child => {
+    dog.traverse(child => {
         if (child.isMesh) {
             child.geometry.computeVertexNormals();
 
             child.material = new THREE.MeshStandardMaterial({
-                color: 0x880000,
+                color: 0x8B4513,
                 roughness: 0.8
             });
-
-            collidableObjects.push(child);
         }
     });
 
-    enemy.scale.set(0.8, 0.8, 0.8);
-    enemy.position.set(0, 1, -60);
+    dog.scale.set(0.5, 0.5, 0.5);
+    dog.position.set(2, 0, 2);
 
-    scene.add(enemy);
-
-    // Animation
-    enemyMixer = new THREE.AnimationMixer(enemy);
-    const clips = glb.animations;
-    if (clips.length > 0) {
-        const action = enemyMixer.clipAction(clips[0]);
-        action.play();
-    }
+    scene.add(dog);
 });
 
 /* -------------------------------------------------------
    CONTROLS + MOVEMENT
 ------------------------------------------------------- */
-const controls = new THREE.PointerLockControls(camera, document.body);
-document.addEventListener("click", () => controls.lock());
-
 const keys = { w:false, a:false, s:false, d:false };
 
 document.addEventListener("keydown", e => {
@@ -318,23 +273,38 @@ document.addEventListener("keyup", e => {
     if (keys[k] !== undefined) keys[k] = false;
 });
 
+document.addEventListener("mousemove", (e) => {
+    if (e.buttons === 1) { // left mouse button
+        cameraAngle += e.movementX * 0.01;
+    }
+});
+
 const raycaster = new THREE.Raycaster();
 
 function handleMovement() {
-    if (!controls.isLocked) return;
+    if (!boulder) return;
 
-    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const speed = 0.1;
 
-    raycaster.set(camera.position, dir);
-    const hits = raycaster.intersectObjects(collidableObjects, true);
-    const canMove = !(hits.length > 0 && hits[0].distance < 1.2);
+    if (keys.w) boulder.position.z -= speed;
+    if (keys.s) boulder.position.z += speed;
+    if (keys.a) boulder.position.x -= speed;
+    if (keys.d) boulder.position.x += speed;
 
-    const speed = 0.07;
+    // Rotate boulder based on movement
+    if (keys.w) boulder.rotation.z += 0.1;
+    if (keys.s) boulder.rotation.z -= 0.1;
+    if (keys.a) boulder.rotation.x += 0.1;
+    if (keys.d) boulder.rotation.x -= 0.1;
 
-    if (keys.w && canMove) controls.moveForward(speed);
-    if (keys.s) controls.moveForward(-speed);
-    if (keys.a) controls.moveRight(-speed);
-    if (keys.d) controls.moveRight(speed);
+    // Update camera position
+    const offset = new THREE.Vector3(
+        Math.sin(cameraAngle) * cameraDistance,
+        cameraHeight,
+        Math.cos(cameraAngle) * cameraDistance
+    );
+    camera.position.copy(boulder.position).add(offset);
+    camera.lookAt(boulder.position);
 }
 
 /* -------------------------------------------------------
@@ -347,30 +317,23 @@ function animate() {
 
     handleMovement();
 
-    // Enemy AI
-    if (enemy) {
-        const playerPos = camera.position.clone();
-        const enemyPos = enemy.position.clone();
-
-        const direction = playerPos.sub(enemyPos).normalize();
-        enemy.position.add(direction.multiplyScalar(enemySpeed));
-
-        enemy.lookAt(camera.position);
-
-        if (enemyMixer) {
-            enemyMixer.update(delta);
-        }
-
-        if (enemy.position.distanceTo(camera.position) < 1.5) {
-            alert("The creature caught you...");
-            location.reload();
-        }
+    // Dog follows boulder
+    if (dog && boulder) {
+        const direction = boulder.position.clone().sub(dog.position).normalize();
+        dog.position.add(direction.multiplyScalar(0.05));
+        dog.lookAt(boulder.position);
     }
 
-    // Escape check
-    if (exitPortal && camera.position.distanceTo(exitPortal.position) < 2) {
-        alert("You escaped the woods.");
-        location.reload();
+    // Check for tree destruction
+    if (boulder) {
+        treeInstances.forEach((tree, index) => {
+            if (tree && boulder.position.distanceTo(tree.position) < 2) {
+                scene.remove(tree);
+                treeInstances.splice(index, 1);
+                score++;
+                document.getElementById('score').textContent = score;
+            }
+        });
     }
 
     renderer.render(scene, camera);
