@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cabin in the Woods</title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/PointerLockControls.js"></script>
+    <!-- Three.js + extras (must be loaded BEFORE game code) -->
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 
     <style>
         body { margin: 0; font-family: Arial, sans-serif; overflow: hidden; }
@@ -90,7 +91,6 @@
 
                 vec3 pos = position;
 
-                // Wind sway
                 float sway = sin(pos.y * 5.0 + time * 2.0 + instanceMatrix[3].x * 0.5) * 0.1;
                 pos.x += sway;
 
@@ -152,7 +152,7 @@
 
         createGPUGrass();
 
-        // --- SHRUB PERIMETER (still using OBJ) ---
+        // --- SHRUB PERIMETER (OBJ) ---
         objLoader.load(REPO_URL + 'shrub.obj', (obj) => {
             shrubObj = obj;
             shrubObj.traverse(child => {
@@ -280,7 +280,6 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Grass wind
             if (scene.userData.grassMaterial) {
                 scene.userData.grassMaterial.uniforms.time.value += 0.02;
             }
