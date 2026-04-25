@@ -31,8 +31,8 @@
     scene.add(flashlight.target);
 
     const collidableObjects = [];
-    const objLoader = new OBJLoader();
-    const gltfLoader = new GLTFLoader();
+    const objLoader = new THREE.OBJLoader();
+    const gltfLoader = new THREE.GLTFLoader();
 
     // 1. Load the Couch .obj
     objLoader.load(REPO_URL + 'couch.obj', (obj) => {
@@ -71,7 +71,7 @@
     });
 
     // --- Controls & Movement ---
-    const controls = new PointerLockControls(camera, document.body);
+    const controls = new THREE.PointerLockControls(camera, document.body);
     document.addEventListener('click', () => controls.lock());
 
     const keys = { w:false, a:false, s:false, d:false };
