@@ -52,7 +52,7 @@
     const TREE_MAX_RADIUS = 120;
     let treeObj1 = null;
     let treeObj2 = null;
-    let treesReady = 0;
+    let forestSpawned = false;
     const objLoader = new THREE.OBJLoader();
     const gltfLoader = new THREE.GLTFLoader();
 
@@ -88,31 +88,12 @@
         return treeTemplate;
     };
 
-    objLoader.load(REPO_URL + 'tree.obj', (treeObj) => {
-        treeObj1 = setupTrees(treeObj);
-        treesReady++;
-        if (treesReady >= 1) spawnForest();
-    }, undefined, (error) => {
-        console.error('Error loading tree.obj:', error);
-        treesReady++;
-        if (treesReady >= 1) spawnForest();
-    });
+    const trySpawnForest = () => {
+        if (forestSpawned || (!treeObj1 && !treeObj2)) return;
+        forestSpawned = true;
 
-    objLoader.load(REPO_URL + 'tree2.obj', (treeObj) => {
-        treeObj2 = setupTrees(treeObj);
-        treesReady++;
-        if (treesReady >= 1) spawnForest();
-    }, undefined, (error) => {
-        console.error('Error loading tree2.obj:', error);
-        treesReady++;
-        if (treesReady >= 1) spawnForest();
-    });
-
-    const spawnForest = () => {
-        if (!treeObj1 && !treeObj2) return;
-        const templateTree = treeObj1 || treeObj2;
-        
         const createTree = () => {
+            const templateTree = treeObj1 && treeObj2 ? (Math.random() > 0.5 ? treeObj1 : treeObj2) : (treeObj1 || treeObj2);
             const tree = templateTree.clone(true);
             tree.traverse(child => {
                 if (child.isMesh && child.material) {
@@ -136,6 +117,24 @@
         }
         console.log('Forest loaded with ' + treeInstances.length + ' trees');
     };
+
+    objLoader.load(REPO_URL + 'tree.obj', (treeObj) => {
+        treeObj1 = setupTrees(treeObj);
+        console.log('tree.obj loaded');
+        trySpawnForest();
+    }, undefined, (error) => {
+        console.error('Error loading tree.obj:', error);
+        trySpawnForest();
+    });
+
+    objLoader.load(REPO_URL + 'tree2.obj', (treeObj) => {
+        treeObj2 = setupTrees(treeObj);
+        console.log('tree2.obj loaded');
+        trySpawnForest();
+    }, undefined, (error) => {
+        console.error('Error loading tree2.obj:', error);
+        trySpawnForest();
+    });
 
     // 3. Load the Cabin .glb
     gltfLoader.load(REPO_URL + 'Cabin.glb', (glb) => {
