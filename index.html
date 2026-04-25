@@ -79,7 +79,9 @@
                 child.castShadow = true;
                 child.receiveShadow = true;
                 if (child.material) {
-                    child.material = child.material.clone();
+                    if (child.material.clone) {
+                        child.material = child.material.clone();
+                    }
                     child.material.color = new THREE.Color(0x2f7d2a);
                 }
             }
@@ -97,7 +99,9 @@
             const tree = templateTree.clone(true);
             tree.traverse(child => {
                 if (child.isMesh && child.material) {
-                    child.material = child.material.clone();
+                    if (child.material.clone) {
+                        child.material = child.material.clone();
+                    }
                     child.material.color = new THREE.Color(0x2f7d2a);
                 }
             });
