@@ -5,7 +5,7 @@
     import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
     // --- GITHUB CONFIG ---
-    const REPO_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/";
+    const REPO_URL = "https://raw.githubusercontent.com/ixlisgood/cabin-in-the-woods/main/";
     
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050505);
@@ -39,6 +39,8 @@
             if (child.isMesh) collidableObjects.push(child);
         });
         console.log("Couch loaded");
+    }, undefined, (error) => {
+        console.error('Error loading couch:', error);
     });
 
     // 2. Add the Interior Wall (Built-in shape)
@@ -57,6 +59,8 @@
         glb.scene.traverse(child => {
             if (child.isMesh) collidableObjects.push(child);
         });
+    }, undefined, (error) => {
+        console.error('Error loading cabin:', error);
     });
 
     // --- Controls & Movement ---
