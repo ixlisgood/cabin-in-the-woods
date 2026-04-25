@@ -152,11 +152,32 @@ objLoader.load(REPO_URL + "couch.obj", (obj) => {
 function setupTree(tree) {
     tree.traverse(child => {
         if (child.isMesh) {
+            child.geometry.computeVertexNormals();
+
+            const pos = child.geometry.attributes.position;
+            const colors = [];
+
+            for (let i = 0; i < pos.count; i++) {
+                const y = pos.getY(i);
+
+                if (y < 2) {
+                    colors.push(0.4, 0.25, 0.1); // brown trunk
+                } else {
+                    colors.push(0.2, 0.6, 0.2); // green leaves
+                }
+            }
+
+            child.geometry.setAttribute(
+                "color",
+                new THREE.Float32BufferAttribute(colors, 3)
+            );
+
             child.material = new THREE.MeshStandardMaterial({
-                color: 0x2f7d2a
+                vertexColors: true
             });
         }
     });
+
     tree.scale.set(0.5, 0.5, 0.5);
     return tree;
 }
@@ -222,31 +243,59 @@ objLoader.load(REPO_URL + "enemy.obj", (obj) => {
 
     enemy.traverse(child => {
         if (child.isMesh) {
+            child.geometry.computeVertexNormals();
+
             child.material = new THREE.MeshStandardMaterial({
                 color: 0x880000,
                 roughness: 0.8
             });
+
             collidableObjects.push(child);
         }
     });
 
-    enemy.scale.set(1.5, 1.5, 1.5);
-    enemy.position.set(0, 0, -60);
+    enemy.scale.set(3, 3, 3);
+    enemy.position.set(0, 1, -60);
 
     scene.add(enemy);
 });
 
 /* -------------------------------------------------------
-   CONTROLS
+   CONTROLS + MOVEMENT
 ------------------------------------------------------- */
 const controls = new THREE.PointerLockControls(camera, document.body);
 document.addEventListener("click", () => controls.lock());
 
 const keys = { w:false, a:false, s:false, d:false };
-document.addEventListener("keydown", e => { if (keys[e.key] !== undefined) keys[e.key] = true; });
-document.addEventListener("keyup", e => { if (keys[e.key] !== undefined) keys[e.key] = false; });
+
+document.addEventListener("keydown", e => {
+    const k = e.key.toLowerCase();
+    if (keys[k] !== undefined) keys[k] = true;
+});
+
+document.addEventListener("keyup", e => {
+    const k = e.key.toLowerCase();
+    if (keys[k] !== undefined) keys[k] = false;
+});
 
 const raycaster = new THREE.Raycaster();
+
+function handleMovement() {
+    if (!controls.isLocked) return;
+
+    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+
+    raycaster.set(camera.position, dir);
+    const hits = raycaster.intersectObjects(collidableObjects, true);
+    const canMove = !(hits.length > 0 && hits[0].distance < 1.2);
+
+    const speed = 0.07;
+
+    if (keys.w && canMove) controls.moveForward(speed);
+    if (keys.s) controls.moveForward(-speed);
+    if (keys.a) controls.moveRight(-speed);
+    if (keys.d) controls.moveRight(speed);
+}
 
 /* -------------------------------------------------------
    ANIMATION LOOP
@@ -254,7 +303,8 @@ const raycaster = new THREE.Raycaster();
 function animate() {
     requestAnimationFrame(animate);
 
-    /* Enemy AI */
+    handleMovement();
+
     if (enemy) {
         const playerPos = camera.position.clone();
         const enemyPos = enemy.position.clone();
@@ -267,21 +317,6 @@ function animate() {
         if (enemy.position.distanceTo(camera.position) < 2) {
             console.log("The monster caught you");
         }
-    }
-
-    /* Player movement */
-    if (controls.isLocked) {
-        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-
-        raycaster.set(camera.position, dir);
-        const hits = raycaster.intersectObjects(collidableObjects, true);
-        const canMove = !(hits.length > 0 && hits[0].distance < 1.2);
-
-        const speed = 0.07;
-        if (keys.w && canMove) controls.moveForward(speed);
-        if (keys.s) controls.moveForward(-speed);
-        if (keys.a) controls.moveRight(-speed);
-        if (keys.d) controls.moveRight(speed);
     }
 
     renderer.render(scene, camera);
