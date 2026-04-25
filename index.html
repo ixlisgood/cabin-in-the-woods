@@ -5,303 +5,259 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cabin in the Woods</title>
 
-    <!-- Three.js + extras (must be loaded BEFORE game code) -->
+    <!-- Three.js + extras -->
     <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 
     <style>
-        body { margin: 0; font-family: Arial, sans-serif; overflow: hidden; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #aaa; font-size: 14px; max-width: 400px; line-height: 1.6; z-index: 10; }
-        #story { color: #d44; font-weight: bold; margin-bottom: 20px; }
-        #controls { color: #888; font-size: 12px; }
+        body { margin: 0; overflow: hidden; font-family: Arial; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #ccc; z-index: 10; }
+        #story { color: #d44; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <div id="story">CABIN IN THE WOODS<br>You wake up in an old cabin... something feels wrong. Find your way out before dark.</div>
-        <div id="controls">WASD: Move | Mouse: Look | Click to start</div>
-    </div>
 
-    <script>
-        const REPO_URL = "./";
+<div id="ui">
+    <div id="story">CABIN IN THE WOODS<br>You wake up in an old cabin... something feels wrong.</div>
+    <div>WASD: Move | Mouse: Look | Click to start</div>
+</div>
 
-        // --- CORE THREE SETUP ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050505);
+<script>
+const REPO_URL = "./";
 
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
-        camera.position.set(0, 2.5, 12);
+/* -------------------------------------------------------
+   BASIC THREE.JS SETUP
+------------------------------------------------------- */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050505);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 2.5, 12);
 
-        // --- LOADERS ---
-        const objLoader = new THREE.OBJLoader();
-        const gltfLoader = new THREE.GLTFLoader();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-        // --- GLOBALS ---
-        const collidableObjects = [];
-        const treeInstances = [];
-        const TREE_COUNT = 30;
-        const TREE_MIN_RADIUS = 35;
-        const TREE_MAX_RADIUS = 80;
-        let treeObj1 = null;
-        let treeObj2 = null;
-        let forestSpawned = false;
-        let shrubObj = null;
+/* -------------------------------------------------------
+   LOADERS
+------------------------------------------------------- */
+const objLoader = new THREE.OBJLoader();
+const gltfLoader = new THREE.GLTFLoader();
 
-        // --- LIGHTING ---
-        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.5));
-        scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+/* -------------------------------------------------------
+   GLOBALS
+------------------------------------------------------- */
+let shrubObj = null;
+let treeObj1 = null;
+let treeObj2 = null;
+let forestSpawned = false;
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(5, 10, 5);
-        scene.add(directionalLight);
+const collidableObjects = [];
+const treeInstances = [];
 
-        const cabinLight = new THREE.PointLight(0xffccaa, 0.7, 20, 2);
-        cabinLight.position.set(0, 3, 0);
-        scene.add(cabinLight);
+const TREE_COUNT = 120;        // ← 120 TREES
+const TREE_MIN_RADIUS = 35;
+const TREE_MAX_RADIUS = 80;
 
-        // --- FLOOR ---
-        const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(1000, 1000),
-            new THREE.MeshStandardMaterial({ color: 0x2b3a15, roughness: 0.95 })
-        );
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        scene.add(floor);
+/* -------------------------------------------------------
+   LIGHTING
+------------------------------------------------------- */
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.5));
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
-        // --- GPU GRASS SHADERS ---
-        const grassVertexShader = `
-            uniform float time;
-            varying vec2 vUv;
-            varying float vY;
+const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+sun.position.set(5, 10, 5);
+scene.add(sun);
 
-            void main() {
-                vUv = uv;
-                vY = position.y;
+const cabinLight = new THREE.PointLight(0xffccaa, 0.7, 20, 2);
+cabinLight.position.set(0, 3, 0);
+scene.add(cabinLight);
 
-                vec3 pos = position;
+/* -------------------------------------------------------
+   FLOOR
+------------------------------------------------------- */
+const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(1000, 1000),
+    new THREE.MeshStandardMaterial({ color: 0x2b3a15, roughness: 0.95 })
+);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
 
-                float sway = sin(pos.y * 5.0 + time * 2.0 + instanceMatrix[3].x * 0.5) * 0.1;
-                pos.x += sway;
+/* -------------------------------------------------------
+   GRASS (grass.obj)
+------------------------------------------------------- */
+objLoader.load(REPO_URL + "grass.obj", (obj) => {
+    const grassObj = obj;
 
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    grassObj.traverse(child => {
+        if (child.isMesh) {
+            if (child.material && child.material.clone) {
+                child.material = child.material.clone();
             }
-        `;
-
-        const grassFragmentShader = `
-            varying vec2 vUv;
-            varying float vY;
-
-            void main() {
-                vec3 bottom = vec3(0.1, 0.3, 0.1);
-                vec3 top = vec3(0.3, 0.8, 0.3);
-                vec3 color = mix(bottom, top, vY);
-                gl_FragColor = vec4(color, 1.0);
-            }
-        `;
-
-        // --- GPU GRASS CREATION ---
-        function createGPUGrass() {
-            const bladeWidth = 0.12;
-            const bladeHeight = 1.2;
-
-            const blade = new THREE.PlaneGeometry(bladeWidth, bladeHeight, 1, 4);
-            blade.translate(0, bladeHeight / 2, 0);
-
-            const grassMaterial = new THREE.ShaderMaterial({
-                vertexShader: grassVertexShader,
-                fragmentShader: grassFragmentShader,
-                uniforms: {
-                    time: { value: 0 }
-                },
-                side: THREE.DoubleSide
-            });
-
-            const instanceCount = 30000;
-            const grass = new THREE.InstancedMesh(blade, grassMaterial, instanceCount);
-
-            const dummy = new THREE.Object3D();
-
-            for (let i = 0; i < instanceCount; i++) {
-                const x = (Math.random() - 0.5) * 300;
-                const z = (Math.random() - 0.5) * 300;
-
-                dummy.position.set(x, 0, z);
-                dummy.rotation.y = Math.random() * Math.PI;
-                dummy.scale.setScalar(0.8 + Math.random() * 0.6);
-
-                dummy.updateMatrix();
-                grass.setMatrixAt(i, dummy.matrix);
-            }
-
-            grass.instanceMatrix.needsUpdate = true;
-            scene.add(grass);
-
-            scene.userData.grassMaterial = grassMaterial;
+            child.material.color = new THREE.Color(0x2b3a15);
         }
+    });
 
-        createGPUGrass();
+    // Make grass wide + long but not tall
+    grassObj.scale.set(10, 1, 10);
 
-        // --- SHRUB PERIMETER (OBJ) ---
-        objLoader.load(REPO_URL + 'shrub.obj', (obj) => {
-            shrubObj = obj;
-            shrubObj.traverse(child => {
-                if (child.isMesh && child.material && child.material.clone) {
-                    child.material = child.material.clone();
-                    child.material.color = new THREE.Color(0x1a2a0a);
-                }
-            });
-            shrubObj.scale.set(1, 1, 1);
-        }, undefined, (error) => {
-            console.error('Error loading shrub:', error);
-        });
+    console.log("Grass loaded");
 
-        // --- COUCH ---
-        objLoader.load(REPO_URL + 'couch.obj', (obj) => {
-            obj.scale.set(0.2, 0.2, 0.2);
-            obj.position.set(3, 0, -3);
-            scene.add(obj);
-
-            obj.traverse(child => {
-                if (child.isMesh) collidableObjects.push(child);
-            });
-        }, undefined, (error) => {
-            console.error('Error loading couch:', error);
-        });
-
-        // --- TREE HELPERS ---
-        const setupTrees = (treeTemplate) => {
-            treeTemplate.traverse(child => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    if (child.material && child.material.clone) {
-                        child.material = child.material.clone();
-                        child.material.color = new THREE.Color(0x2f7d2a);
-                    }
-                }
-            });
-            treeTemplate.scale.set(0.5, 0.5, 0.5);
-            return treeTemplate;
-        };
-
-        const trySpawnForest = () => {
-            if (forestSpawned || (!treeObj1 && !treeObj2)) return;
-            forestSpawned = true;
-
-            for (let i = 0; i < TREE_COUNT; i++) {
-                const template =
-                    treeObj1 && treeObj2
-                        ? (Math.random() > 0.5 ? treeObj1 : treeObj2)
-                        : (treeObj1 || treeObj2);
-
-                const tree = template.clone(true);
-
-                const angle = Math.random() * Math.PI * 2;
-                const radius = THREE.MathUtils.lerp(TREE_MIN_RADIUS, TREE_MAX_RADIUS, Math.random());
-
-                tree.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-                tree.rotation.y = Math.random() * Math.PI * 2;
-
-                scene.add(tree);
-                treeInstances.push(tree);
-
-                tree.traverse(child => {
-                    if (child.isMesh) collidableObjects.push(child);
-                });
-            }
-        };
-
-        // --- TREES ---
-        objLoader.load(REPO_URL + 'tree.obj', (obj) => {
-            treeObj1 = setupTrees(obj);
-            trySpawnForest();
-        }, undefined, (error) => {
-            console.error('Error loading tree.obj:', error);
-            trySpawnForest();
-        });
-
-        objLoader.load(REPO_URL + 'tree2.obj', (obj) => {
-            treeObj2 = setupTrees(obj);
-            trySpawnForest();
-        }, undefined, (error) => {
-            console.error('Error loading tree2.obj:', error);
-            trySpawnForest();
-        });
-
-        // --- CABIN ---
-        gltfLoader.load(REPO_URL + 'Cabin.glb', (glb) => {
-            glb.scene.scale.set(13, 13, 13);
-            const bbox = new THREE.Box3().setFromObject(glb.scene);
-            glb.scene.position.set(0, -bbox.min.y, 0);
-            scene.add(glb.scene);
-
-            glb.scene.traverse(child => {
-                if (child.isMesh) collidableObjects.push(child);
-            });
-        }, undefined, (error) => {
-            console.error('Error loading cabin:', error);
-        });
-
-        // --- CONTROLS & INPUT ---
-        const controls = new THREE.PointerLockControls(camera, document.body);
-        document.addEventListener('click', () => controls.lock());
-
-        const keys = { w:false, a:false, s:false, d:false };
-        document.addEventListener('keydown', (e) => {
-            const k = e.key.toLowerCase();
-            if (k in keys) keys[k] = true;
-        });
-        document.addEventListener('keyup', (e) => {
-            const k = e.key.toLowerCase();
-            if (k in keys) keys[k] = false;
-        });
-
-        const raycaster = new THREE.Raycaster();
-
-        // --- RESIZE ---
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // --- ANIMATION LOOP ---
-        function animate() {
-            requestAnimationFrame(animate);
-
-            if (scene.userData.grassMaterial) {
-                scene.userData.grassMaterial.uniforms.time.value += 0.02;
-            }
-
-            if (controls.isLocked) {
-                const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-
-                raycaster.set(camera.position, dir);
-                const hits = raycaster.intersectObjects(collidableObjects, true);
-                const canMoveForward = !(hits.length > 0 && hits[0].distance < 1.2);
-
-                const speed = 0.07;
-                if (keys.w && canMoveForward) controls.moveForward(speed);
-                if (keys.s) controls.moveForward(-speed);
-                if (keys.a) controls.moveRight(-speed);
-                if (keys.d) controls.moveRight(speed);
-            }
-
-            renderer.render(scene, camera);
+    // Spread grass over a large area
+    for (let x = -150; x <= 150; x += 30) {
+        for (let z = -150; z <= 150; z += 30) {
+            const patch = grassObj.clone(true);
+            patch.position.set(x, 0, z);
+            scene.add(patch);
         }
+    }
+});
 
-        animate();
-    </script>
+/* -------------------------------------------------------
+   SHRUB WALL
+------------------------------------------------------- */
+objLoader.load(REPO_URL + "shrub.obj", (obj) => {
+    shrubObj = obj;
+    shrubObj.traverse(child => {
+        if (child.isMesh && child.material) {
+            child.material = child.material.clone();
+            child.material.color = new THREE.Color(0x1a2a0a);
+        }
+    });
+});
+
+/* -------------------------------------------------------
+   COUCH
+------------------------------------------------------- */
+objLoader.load(REPO_URL + "couch.obj", (obj) => {
+    obj.scale.set(0.2, 0.2, 0.2);
+    obj.position.set(3, 0, -3);
+    scene.add(obj);
+
+    obj.traverse(child => {
+        if (child.isMesh) collidableObjects.push(child);
+    });
+});
+
+/* -------------------------------------------------------
+   TREE HELPERS
+------------------------------------------------------- */
+function setupTree(tree) {
+    tree.traverse(child => {
+        if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            if (child.material && child.material.clone) {
+                child.material = child.material.clone();
+                child.material.color = new THREE.Color(0x2f7d2a);
+            }
+        }
+    });
+    tree.scale.set(0.5, 0.5, 0.5);
+    return tree;
+}
+
+function trySpawnForest() {
+    if (forestSpawned || (!treeObj1 && !treeObj2)) return;
+    forestSpawned = true;
+
+    for (let i = 0; i < TREE_COUNT; i++) {
+        const template = (treeObj1 && treeObj2)
+            ? (Math.random() > 0.5 ? treeObj1 : treeObj2)
+            : (treeObj1 || treeObj2);
+
+        const tree = template.clone(true);
+
+        const angle = Math.random() * Math.PI * 2;
+        const radius = THREE.MathUtils.lerp(TREE_MIN_RADIUS, TREE_MAX_RADIUS, Math.random());
+
+        tree.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+        tree.rotation.y = Math.random() * Math.PI * 2;
+
+        scene.add(tree);
+        treeInstances.push(tree);
+
+        tree.traverse(child => {
+            if (child.isMesh) collidableObjects.push(child);
+        });
+    }
+}
+
+/* -------------------------------------------------------
+   LOAD TREES
+------------------------------------------------------- */
+objLoader.load(REPO_URL + "tree.obj", (obj) => {
+    treeObj1 = setupTree(obj);
+    trySpawnForest();
+});
+
+objLoader.load(REPO_URL + "tree2.obj", (obj) => {
+    treeObj2 = setupTree(obj);
+    trySpawnForest();
+});
+
+/* -------------------------------------------------------
+   CABIN
+------------------------------------------------------- */
+gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
+    glb.scene.scale.set(13, 13, 13);
+    const bbox = new THREE.Box3().setFromObject(glb.scene);
+    glb.scene.position.set(0, -bbox.min.y, 0);
+    scene.add(glb.scene);
+
+    glb.scene.traverse(child => {
+        if (child.isMesh) collidableObjects.push(child);
+    });
+});
+
+/* -------------------------------------------------------
+   CONTROLS
+------------------------------------------------------- */
+const controls = new THREE.PointerLockControls(camera, document.body);
+document.addEventListener("click", () => controls.lock());
+
+const keys = { w:false, a:false, s:false, d:false };
+document.addEventListener("keydown", e => { if (keys[e.key]) keys[e.key] = true; });
+document.addEventListener("keyup", e => { if (keys[e.key]) keys[e.key] = false; });
+
+const raycaster = new THREE.Raycaster();
+
+/* -------------------------------------------------------
+   ANIMATION LOOP
+------------------------------------------------------- */
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (controls.isLocked) {
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+
+        raycaster.set(camera.position, dir);
+        const hits = raycaster.intersectObjects(collidableObjects, true);
+        const canMove = !(hits.length > 0 && hits[0].distance < 1.2);
+
+        const speed = 0.07;
+        if (keys.w && canMove) controls.moveForward(speed);
+        if (keys.s) controls.moveForward(-speed);
+        if (keys.a) controls.moveRight(-speed);
+        if (keys.d) controls.moveRight(speed);
+    }
+
+    renderer.render(scene, camera);
+}
+
+animate();
+
+/* -------------------------------------------------------
+   RESIZE
+------------------------------------------------------- */
+window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
 </body>
 </html>
