@@ -56,6 +56,7 @@ let forestSpawned = false;
 
 let enemy = null;
 let enemySpeed = 0.1; // faster
+let enemyMixer = null;
 
 const collidableObjects = [];
 const treeInstances = [];
@@ -65,6 +66,8 @@ const TREE_MIN_RADIUS = 35;
 const TREE_MAX_RADIUS = 80;
 
 let exitPortal = null;
+
+const clock = new THREE.Clock();
 
 /* -------------------------------------------------------
    LIGHTING
@@ -265,10 +268,10 @@ gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
 });
 
 /* -------------------------------------------------------
-   ENEMY (enemy.obj)
+   ENEMY (enemy.glb)
 ------------------------------------------------------- */
-objLoader.load(REPO_URL + "enemy.obj", (obj) => {
-    enemy = obj;
+gltfLoader.load(REPO_URL + "enemy.glb", (glb) => {
+    enemy = glb.scene;
 
     enemy.traverse(child => {
         if (child.isMesh) {
@@ -287,6 +290,14 @@ objLoader.load(REPO_URL + "enemy.obj", (obj) => {
     enemy.position.set(0, 1, -60);
 
     scene.add(enemy);
+
+    // Animation
+    enemyMixer = new THREE.AnimationMixer(enemy);
+    const clips = glb.animations;
+    if (clips.length > 0) {
+        const action = enemyMixer.clipAction(clips[0]);
+        action.play();
+    }
 });
 
 /* -------------------------------------------------------
@@ -332,9 +343,11 @@ function handleMovement() {
 function animate() {
     requestAnimationFrame(animate);
 
+    const delta = clock.getDelta();
+
     handleMovement();
 
-    // Enemy AI + fake walk animation
+    // Enemy AI
     if (enemy) {
         const playerPos = camera.position.clone();
         const enemyPos = enemy.position.clone();
@@ -344,9 +357,9 @@ function animate() {
 
         enemy.lookAt(camera.position);
 
-        const t = Date.now() * 0.005;
-        enemy.position.y = 1 + Math.sin(t) * 0.1;
-        enemy.rotation.x = Math.sin(t * 0.6) * 0.1;
+        if (enemyMixer) {
+            enemyMixer.update(delta);
+        }
 
         if (enemy.position.distanceTo(camera.position) < 1.5) {
             alert("The creature caught you...");
