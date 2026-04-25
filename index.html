@@ -215,27 +215,14 @@ objLoader.load(REPO_URL + "tree2.obj", (obj) => {
 });
 
 /* -------------------------------------------------------
-   BOULDER (boulder.glb)
+   BOULDER (placeholder sphere)
 ------------------------------------------------------- */
-gltfLoader.load(REPO_URL + "boulder.glb", (glb) => {
-    boulder = glb.scene;
-
-    boulder.traverse(child => {
-        if (child.isMesh) {
-            child.geometry.computeVertexNormals();
-
-            child.material = new THREE.MeshStandardMaterial({
-                color: 0x666666,
-                roughness: 0.9
-            });
-        }
-    });
-
-    boulder.scale.set(1, 1, 1);
-    boulder.position.set(0, 1, 0);
-
-    scene.add(boulder);
-});
+boulder = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.9 })
+);
+boulder.position.set(0, 1, 0);
+scene.add(boulder);
 
 /* -------------------------------------------------------
    DOG (dog.glb)
