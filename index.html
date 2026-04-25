@@ -96,10 +96,10 @@ objLoader.load(REPO_URL + "grass.obj", (obj) => {
 
     grassObj.traverse(child => {
         if (child.isMesh) {
-            if (child.material && child.material.clone) {
-                child.material = child.material.clone();
-            }
-            child.material.color = new THREE.Color(0x2b3a15);
+            child.material = new THREE.MeshStandardMaterial({
+                color: 0x2b3a15,
+                roughness: 1
+            });
         }
     });
 
@@ -120,9 +120,10 @@ objLoader.load(REPO_URL + "grass.obj", (obj) => {
 objLoader.load(REPO_URL + "shrub.obj", (obj) => {
     shrubObj = obj;
     shrubObj.traverse(child => {
-        if (child.isMesh && child.material) {
-            child.material = child.material.clone();
-            child.material.color = new THREE.Color(0x1a2a0a);
+        if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+                color: 0x1a2a0a
+            });
         }
     });
 });
@@ -136,7 +137,12 @@ objLoader.load(REPO_URL + "couch.obj", (obj) => {
     scene.add(obj);
 
     obj.traverse(child => {
-        if (child.isMesh) collidableObjects.push(child);
+        if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+                color: 0xaaaaaa
+            });
+            collidableObjects.push(child);
+        }
     });
 });
 
@@ -146,12 +152,9 @@ objLoader.load(REPO_URL + "couch.obj", (obj) => {
 function setupTree(tree) {
     tree.traverse(child => {
         if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            if (child.material && child.material.clone) {
-                child.material = child.material.clone();
-                child.material.color = new THREE.Color(0x2f7d2a);
-            }
+            child.material = new THREE.MeshStandardMaterial({
+                color: 0x2f7d2a
+            });
         }
     });
     tree.scale.set(0.5, 0.5, 0.5);
@@ -219,10 +222,10 @@ objLoader.load(REPO_URL + "enemy.obj", (obj) => {
 
     enemy.traverse(child => {
         if (child.isMesh) {
-            if (child.material && child.material.clone) {
-                child.material = child.material.clone();
-            }
-            child.material.color = new THREE.Color(0x880000);
+            child.material = new THREE.MeshStandardMaterial({
+                color: 0x880000,
+                roughness: 0.8
+            });
             collidableObjects.push(child);
         }
     });
