@@ -55,7 +55,7 @@ let treeObj2 = null;
 let forestSpawned = false;
 
 let enemy = null;
-let enemySpeed = 0.03;
+let enemySpeed = 0.1; // faster
 
 const collidableObjects = [];
 const treeInstances = [];
@@ -63,6 +63,8 @@ const treeInstances = [];
 const TREE_COUNT = 120;
 const TREE_MIN_RADIUS = 35;
 const TREE_MAX_RADIUS = 80;
+
+let exitPortal = null;
 
 /* -------------------------------------------------------
    LIGHTING
@@ -87,6 +89,16 @@ const floor = new THREE.Mesh(
 );
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
+
+/* -------------------------------------------------------
+   EXIT PORTAL
+------------------------------------------------------- */
+exitPortal = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 3, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x008844 })
+);
+exitPortal.position.set(0, 1.5, 80);
+scene.add(exitPortal);
 
 /* -------------------------------------------------------
    GRASS (grass.obj)
@@ -225,14 +237,20 @@ objLoader.load(REPO_URL + "tree2.obj", (obj) => {
    CABIN
 ------------------------------------------------------- */
 gltfLoader.load(REPO_URL + "Cabin.glb", (glb) => {
+    glb.scene.traverse(child => {
+        if (child.isMesh) {
+            child.material = new THREE.MeshStandardMaterial({
+                color: 0x888888,
+                roughness: 0.9
+            });
+            collidableObjects.push(child);
+        }
+    });
+
     glb.scene.scale.set(13, 13, 13);
     const bbox = new THREE.Box3().setFromObject(glb.scene);
     glb.scene.position.set(0, -bbox.min.y, 0);
     scene.add(glb.scene);
-
-    glb.scene.traverse(child => {
-        if (child.isMesh) collidableObjects.push(child);
-    });
 });
 
 /* -------------------------------------------------------
@@ -254,7 +272,7 @@ objLoader.load(REPO_URL + "enemy.obj", (obj) => {
         }
     });
 
-    enemy.scale.set(3, 3, 3);
+    enemy.scale.set(0.8, 0.8, 0.8); // smaller
     enemy.position.set(0, 1, -60);
 
     scene.add(enemy);
@@ -305,6 +323,7 @@ function animate() {
 
     handleMovement();
 
+    // Enemy AI + fake walk animation
     if (enemy) {
         const playerPos = camera.position.clone();
         const enemyPos = enemy.position.clone();
@@ -314,9 +333,22 @@ function animate() {
 
         enemy.lookAt(camera.position);
 
-        if (enemy.position.distanceTo(camera.position) < 2) {
-            console.log("The monster caught you");
+        // Fake walking animation: bob + sway
+        const t = Date.now() * 0.005;
+        enemy.position.y = 1 + Math.sin(t) * 0.1;
+        enemy.rotation.x = Math.sin(t * 0.6) * 0.1;
+
+        // Catch player
+        if (enemy.position.distanceTo(camera.position) < 1.5) {
+            alert("The creature caught you...");
+            location.reload();
         }
+    }
+
+    // Escape check
+    if (exitPortal && camera.position.distanceTo(exitPortal.position) < 2) {
+        alert("You escaped the woods.");
+        location.reload();
     }
 
     renderer.render(scene, camera);
