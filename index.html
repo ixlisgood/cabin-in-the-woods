@@ -50,6 +50,9 @@
     const TREE_COUNT = 140;
     const TREE_MIN_RADIUS = 18;
     const TREE_MAX_RADIUS = 120;
+    let treeObj1 = null;
+    let treeObj2 = null;
+    let treesReady = 0;
     const objLoader = new THREE.OBJLoader();
     const gltfLoader = new THREE.GLTFLoader();
 
@@ -69,9 +72,9 @@
         console.error('Error loading couch:', error);
     });
 
-    // 2. Load the Tree .obj and place the forest around the cabin
-    objLoader.load(REPO_URL + 'tree.obj', (treeObj) => {
-        treeObj.traverse(child => {
+    // 2. Load the Tree .obj files and place the forest around the cabin
+    const setupTrees = (treeTemplate) => {
+        treeTemplate.traverse(child => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
@@ -81,10 +84,30 @@
                 }
             }
         });
-        treeObj.scale.set(0.5, 0.5, 0.5);
+        treeTemplate.scale.set(0.5, 0.5, 0.5);
+        return treeTemplate;
+    };
 
+    objLoader.load(REPO_URL + 'tree.obj', (treeObj) => {
+        treeObj1 = setupTrees(treeObj);
+        treesReady++;
+        if (treesReady === 2) spawnForest();
+    }, undefined, (error) => {
+        console.error('Error loading tree.obj:', error);
+    });
+
+    objLoader.load(REPO_URL + 'tree2.obj', (treeObj) => {
+        treeObj2 = setupTrees(treeObj);
+        treesReady++;
+        if (treesReady === 2) spawnForest();
+    }, undefined, (error) => {
+        console.error('Error loading tree2.obj:', error);
+    });
+
+    const spawnForest = () => {
         const createTree = () => {
-            const tree = treeObj.clone(true);
+            const templateTree = Math.random() > 0.5 ? treeObj1 : treeObj2;
+            const tree = templateTree.clone(true);
             tree.traverse(child => {
                 if (child.isMesh && child.material) {
                     child.material = child.material.clone();
@@ -106,13 +129,11 @@
             createTree();
         }
         console.log('Forest loaded with ' + treeInstances.length + ' trees');
-    }, undefined, (error) => {
-        console.error('Error loading tree:', error);
-    });
+    };
 
     // 3. Load the Cabin .glb
     gltfLoader.load(REPO_URL + 'Cabin.glb', (glb) => {
-        glb.scene.scale.set(10, 10, 10);
+        glb.scene.scale.set(13, 13, 13);
         const bbox = new THREE.Box3().setFromObject(glb.scene);
         glb.scene.position.set(0, -bbox.min.y, 0);
         scene.add(glb.scene);
