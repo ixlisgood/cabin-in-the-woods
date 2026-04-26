@@ -363,7 +363,7 @@ function handleMovement() {
                 score++;
                 document.getElementById('score').textContent = score;
             }
-        });
+        ;
         barrels.forEach((barrel, index) => {
             if (barrel && boulder.position.distanceTo(barrel.position) < 2) {
                 createParticles(barrel.position);
@@ -374,14 +374,14 @@ function handleMovement() {
                 document.getElementById('score').textContent = score;
             }
         });
-    }
+    
 
     updateParticles();   cameraHeight,
         Math.cos(cameraAngle) * cameraDistance
-    );
+    ;
     camera.position.copy(boulder.position).add(offset);
     camera.lookAt(boulder.position);
-}
+
 
 /* -------------------------------------------------------
    ANIMATION LOOP
