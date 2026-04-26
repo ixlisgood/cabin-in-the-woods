@@ -345,50 +345,6 @@ function updateParticles() {
     });
 }
 
-function handleMovement() {
-    if (!boulder) return;
-    targetPos = boulder.position.clone();
-    targetPos.y = 0; // keep on ground
-    dog.position.lerp(targetPos, 0.05);
-
-    if (keys.w) boulder.position.z -= speed;
-    if (keys.s) boulder.position.z += speed;
-    if (keys.a) boulder.position.x -= speed;
-    if (keys.d) boulder.position.x += speed;
-
-    // Rotate boulder based on movement
-    if (keys.w) boulder.rotation.z += 0.1;
-    if (keys.s) boulder.rotation.z -= 0.1;
-    if (keys.a) createParticles(tree.position);
-                scene.remove(tree);
-                treeInstances.splice(index, 1);
-                score++;
-                document.getElementById('score').textContent = score;
-            }
-        ;
-        barrels.forEach((barrel, index) => {
-            if (barrel && boulder.position.distanceTo(barrel.position) < 2) {
-                createParticles(barrel.position);
-                scene.remove(barrel);
-                barrels.splice(index, 1);
-                collidableObjects.splice(collidableObjects.indexOf(barrel), 1);
-                score++;
-                document.getElementById('score').textContent = score;
-            }
-        });
-    
-
-    updateParticles();
-
-    // Update camera position (third-person)
-    const offset = new THREE.Vector3(
-        Math.sin(cameraAngle) * cameraDistance,
-        cameraHeight,
-        Math.cos(cameraAngle) * cameraDistance
-    );
-    camera.position.copy(boulder.position).add(offset);
-    camera.lookAt(boulder.position);
-
 /* -------------------------------------------------------
    ANIMATION LOOP
 ------------------------------------------------------- */
