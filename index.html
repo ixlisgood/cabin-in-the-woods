@@ -68,6 +68,10 @@ const TREE_COUNT = 120;
 const TREE_MIN_RADIUS = 35;
 const TREE_MAX_RADIUS = 80;
 
+let cameraHeight = 5;
+let cameraDistance = 12;
+let cameraAngle = 0;
+
 let boulderVelocity = new THREE.Vector3(0, 0, 0);
 let mouseX = 0;
 let mouseY = 0;
@@ -376,12 +380,16 @@ function handleMovement() {
         });
     
 
-    updateParticles();   cameraHeight,
+    updateParticles();
+
+    // Update camera position (third-person)
+    const offset = new THREE.Vector3(
+        Math.sin(cameraAngle) * cameraDistance,
+        cameraHeight,
         Math.cos(cameraAngle) * cameraDistance
-    ;
+    );
     camera.position.copy(boulder.position).add(offset);
     camera.lookAt(boulder.position);
-
 
 /* -------------------------------------------------------
    ANIMATION LOOP
@@ -403,7 +411,7 @@ function animate() {
     // Check for tree destruction
     if (boulder) {
         treeInstances.forEach((tree, index) => {
-            if (tree & boulder.position.distanceTo(tree.position) < 2) {
+            if (tree && boulder.position.distanceTo(tree.position) < 2) {
                 scene.remove(tree);
                 treeInstances.splice(index, 1);
                 score++;
