@@ -345,9 +345,9 @@ function updateParticles() {
 
 function handleMovement() {
     if (!boulder) return;
-targetPos = boulder.position.clone();
-        targetPos.y = 0; // keep on ground
-        dog.position.lerp(targetPos, 0.05
+    targetPos = boulder.position.clone();
+    targetPos.y = 0; // keep on ground
+    dog.position.lerp(targetPos, 0.05);
 
     if (keys.w) boulder.position.z -= speed;
     if (keys.s) boulder.position.z += speed;
